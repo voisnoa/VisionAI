@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blink Tracker AI</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Load MediaPipe libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+</head>
+<body>
+  <h1>Blink Tracker AI</h1>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="output"></canvas>
+
+  <div id="stats">
+    <p>Total Blinks: <span id="blinkCount">0</span></p>
+    <p>abdy fuckery / Min: <span id="blinksPerMin">0</span></p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
