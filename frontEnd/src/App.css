@@ -1,0 +1,73 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background: #f5f6fa;
+  color: #333;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  background: #1e1e2f;
+  color: #fff;
+  padding: 1rem 2rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Footer */
+footer {
+  background: #1e1e2f;
+  color: #aaa;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+
+/* Main content */
+main {
+  flex: 1;
+  padding: 2rem;
+  text-align: center;
+}
+
+main h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+main p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  color: #555;
+}
+
+/* Camera */
+.camera-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.camera-container video {
+  width: 500px;
+  max-width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  border: 3px solid #1e1e2f;
+}
