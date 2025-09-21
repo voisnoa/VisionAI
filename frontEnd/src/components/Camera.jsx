@@ -1,112 +1,96 @@
-import { useRef, useEffect, useState } from "react";
-import * as faceapi from "face-api.js";
+import React, { useRef, useEffect, useState } from "react";
+import { FaceMesh } from "@mediapipe/face_mesh";
+import { Camera } from "@mediapipe/camera_utils";
 
-function Camera() {
+const CameraComponent = ({ onResults }) => {
   const videoRef = useRef(null);
-  const [blinkCount, setBlinkCount] = useState(0);
-  const [tracking, setTracking] = useState(false);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const canvasRef = useRef(null);
+  const [cameraInstance, setCameraInstance] = useState(null);
 
-  // Load face-api.js models
   useEffect(() => {
-    async function loadModels() {
-      const MODEL_URL = "/models"; // put models in public/models
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-      setModelsLoaded(true);
-    }
-    loadModels();
-  }, []);
+    if (!videoRef.current) return;
 
-  // Start camera
-  useEffect(() => {
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error("Error accessing camera:", err);
-      }
-    }
-    startCamera();
-  }, []);
+    // Initialize FaceMesh
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
 
-  // Track blinks
-  useEffect(() => {
-    if (!tracking || !modelsLoaded) return;
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
 
-    let lastEyeClosed = false;
-    const interval = setInterval(async () => {
-      if (videoRef.current) {
-        const detections = await faceapi
-          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks(true);
+    faceMesh.onResults((results) => {
+      if (!canvasRef.current) return;
 
-        if (detections) {
-          const landmarks = detections.landmarks;
-          const leftEye = landmarks.getLeftEye();
-          const rightEye = landmarks.getRightEye();
+      const canvasCtx = canvasRef.current.getContext("2d");
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-          const eyeOpenRatio = (eye) => {
-            const vertical = Math.hypot(eye[1].y - eye[5].y) + Math.hypot(eye[2].y - eye[4].y);
-            const horizontal = Math.hypot(eye[0].x - eye[3].x);
-            return vertical / (2.0 * horizontal);
-          };
+      // Draw video
+      canvasCtx.drawImage(
+        results.image,
+        0,
+        0,
+        canvasRef.current.width,
+        canvasRef.current.height
+      );
 
-          const leftOpen = eyeOpenRatio(leftEye);
-          const rightOpen = eyeOpenRatio(rightEye);
-
-          const isClosed = (leftOpen + rightOpen) / 2 < 0.25; // threshold
-
-          if (isClosed && !lastEyeClosed) {
-            setBlinkCount((prev) => prev + 1);
-            lastEyeClosed = true;
-          } else if (!isClosed) {
-            lastEyeClosed = false;
+      // Draw landmarks if available
+      if (results.multiFaceLandmarks) {
+        for (const landmarks of results.multiFaceLandmarks) {
+          for (let i = 0; i < landmarks.length; i++) {
+            const x = landmarks[i].x * canvasRef.current.width;
+            const y = landmarks[i].y * canvasRef.current.height;
+            canvasCtx.beginPath();
+            canvasCtx.arc(x, y, 1.5, 0, 2 * Math.PI);
+            canvasCtx.fillStyle = "red";
+            canvasCtx.fill();
           }
         }
       }
-    }, 200); // check every 200ms
 
-    return () => clearInterval(interval);
-  }, [tracking, modelsLoaded]);
+      canvasCtx.restore();
+
+      // Optional: pass results to parent
+      if (onResults) onResults(results);
+    });
+
+    // Initialize camera
+    const camera = new Camera(videoRef.current, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoRef.current });
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start();
+    setCameraInstance(camera);
+
+    return () => {
+      if (cameraInstance) cameraInstance.stop();
+    };
+  }, []);
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <video ref={videoRef} autoPlay playsInline width="500" style={{ borderRadius: "10px" }} />
-
-      <div style={{ marginTop: "1rem" }}>
-        <button
-          onClick={() => {
-            if (tracking) {
-              setTracking(false);
-            } else {
-              setBlinkCount(0);
-              setTracking(true);
-            }
-          }}
-          style={{
-            padding: "0.6rem 1.2rem",
-            fontSize: "1rem",
-            borderRadius: "8px",
-            border: "none",
-            cursor: "pointer",
-            background: tracking ? "#e74c3c" : "#2ecc71",
-            color: "#fff",
-            marginRight: "1rem",
-          }}
-        >
-          {tracking ? "End Session" : "Start Session"}
-        </button>
-
-        <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-          Blinks: {blinkCount}
-        </span>
-      </div>
+    <div style={{ position: "relative" }}>
+      <video
+        ref={videoRef}
+        style={{ display: "none" }}
+        width="640"
+        height="480"
+      />
+      <canvas
+        ref={canvasRef}
+        width="640"
+        height="480"
+        style={{ border: "1px solid black" }}
+      />
     </div>
   );
-}
+};
 
-export default Camera;
+export default CameraComponent;
